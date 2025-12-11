@@ -1,0 +1,85 @@
+1.
+ALTER TABLE IF EXISTS public."Amazon_sales_data"
+    ADD COLUMN datekey integer;
+
+2.
+ALTER TABLE IF EXISTS public."Date"
+    ADD COLUMN datekey integer;
+
+3.
+UPDATE "Date"
+SET "datekey" =
+      (EXTRACT(YEAR FROM "Date")::integer * 10000) +
+      (EXTRACT(MONTH FROM "Date")::integer * 100) +
+      (EXTRACT(DAY FROM "Date")::integer);
+
+4.
+UPDATE "Amazon_sales_data"
+SET "datekey" =
+    (EXTRACT(YEAR FROM "OrderDate"::date)::integer * 10000) +
+    (EXTRACT(MONTH FROM "OrderDate"::date)::integer * 100) +
+    (EXTRACT(DAY FROM "OrderDate"::date)::integer)
+WHERE "OrderDate" IS NOT NULL;
+
+5.
+CREATE OR REPLACE VIEW public.v_customer_sales
+ AS
+ SELECT "CustomerID",
+    "CustomerName",
+    "City",
+    "State",
+    "Country",
+    sum("TotalAmount") AS "LifetimeValue",
+    count(*) AS "OrderCount"
+   FROM "Amazon_sales_data"
+  GROUP BY "CustomerID", "CustomerName", "City", "State", "Country"
+  ORDER BY (sum("TotalAmount")) DESC;
+
+6.
+CREATE OR REPLACE VIEW public.v_order_status
+ AS
+ SELECT "OrderStatus",
+    count(*) AS "StatusCount"
+   FROM "Amazon_sales_data"
+  GROUP BY "OrderStatus"
+  ORDER BY (count(*)) DESC;
+
+7.
+
+CREATE OR REPLACE VIEW public.v_product_performance
+ AS
+ SELECT "ProductName",
+    "Category",
+    "Brand",
+    sum("Quantity") AS "TotalUnits",
+    sum("TotalAmount") AS "Revenue"
+   FROM "Amazon_sales_data"
+  WHERE "OrderStatus"::text = 'Delivered'::text
+  GROUP BY "ProductName", "Category", "Brand"
+  ORDER BY (sum("TotalAmount")) DESC;
+
+8.
+
+CREATE OR REPLACE VIEW public.v_sales_summary
+ AS
+ SELECT "OrderDate",
+    sum("TotalAmount") AS totalsales,
+    sum("Quantity") AS unitssold,
+    count(*) AS totalorders
+   FROM "Amazon_sales_data"
+  WHERE "OrderStatus"::text = 'Delivered'::text
+  GROUP BY "OrderDate";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
